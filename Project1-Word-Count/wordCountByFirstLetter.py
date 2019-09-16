@@ -4,22 +4,19 @@ import re
 print("Starting...")
 
 def splitter(line):
+
+	def format(word):
+		word = word.lower()
+		return word[0] if (len(word)) else ""
+		
 	line = re.sub(r'^\W+|\W+$', '', line)
-	return map(str.lower, re.split(r'\W+', line))
+	mappedWords = map(format, re.split(r'\W+', line))
+	return mappedWords
 	
 sc = SparkContext("local", "wordcount")
-
-#input = sc.textFile("pg100.txt", 1)
-#words = input.flatMap(splitter)
-#words_mapped = words.map(lambda x: (x,1))
-
-#sorted_map = words_mapped.sortByKey()
-#counts = sorted_map.reduceByKey("add")
-
-#counts.saveAsTextFile("./wordCount.txt")
 
 text_file = sc.textFile("pg100.txt")
 counts = text_file.flatMap(splitter) \
              .map(lambda word: (word, 1)) \
              .reduceByKey(lambda a, b: a + b)
-counts.saveAsTextFile("wordCountOutput")
+counts.saveAsTextFile("wordCountByFirstLetterOutput")
