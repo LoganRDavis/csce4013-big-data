@@ -1,7 +1,10 @@
+# Word count match whole word ignore case.
+import shutil
 from pyspark import SparkContext
 import re
 
 print("Starting...")
+shutil.rmtree("wordCountOutput")
 
 def splitter(line):
 	line = re.sub(r'^\W+|\W+$', '', line)
@@ -9,17 +12,10 @@ def splitter(line):
 	
 sc = SparkContext("local", "wordcount")
 
-#input = sc.textFile("pg100.txt", 1)
-#words = input.flatMap(splitter)
-#words_mapped = words.map(lambda x: (x,1))
-
-#sorted_map = words_mapped.sortByKey()
-#counts = sorted_map.reduceByKey("add")
-
-#counts.saveAsTextFile("./wordCount.txt")
-
 text_file = sc.textFile("pg100.txt")
 counts = text_file.flatMap(splitter) \
              .map(lambda word: (word, 1)) \
-             .reduceByKey(lambda a, b: a + b)
+             .reduceByKey(lambda a, b: a + b) \
+			 .sortByKey(True)
+
 counts.saveAsTextFile("wordCountOutput")
