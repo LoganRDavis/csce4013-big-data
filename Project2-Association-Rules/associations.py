@@ -19,34 +19,33 @@ def splitToId(line):
 	line = re.sub(r'^\W+|\W+$', '', line)
 	return re.split(r'\W+', line)
 
-def splitToPair(line):
-	line = re.sub(r'^\W+|\W+$', '', line)
-	ids = re.split(r'\W+', line)
-	pairs = []
-	for index, id in enumerate(ids):
-		for index2, id2 in enumerate(ids):
-			if index2 <= index:
-				continue
-			if id > id2:
-				pairs.append((id, id2))	
+def findSingleCandiates(lines):
+	baskets = list(map(splitToId, lines))
+	counts = {}
+	threshold = support / partitions
+	for basket in baskets:
+		for id in basket:
+			if id not in counts:
+				counts[id] = 1
 			else:
-				pairs.append((id2, id))
-	return pairs
+				counts[id] += 1
+	print(len(list(counts)))
+	for id in list(counts):
+		if counts[id] < threshold:
+			del counts[id]
+	return list(counts)
 
 clearOutputs()
+support = 100
+partitions = 5
+sc = SparkContext("local", "SonApriori")
+rddToProcess = sc.textFile('browsing.txt', partitions)
 
-sc = SparkContext("local", "associations")
+#First Phase
+firstPhaseArray = rddToProcess \
+				.mapPartitions(findSingleCandiates) \
+				.distinct() \
+				.collect() 
 
-text_file = sc.textFile('browsing.txt')
-counts = text_file \
-			.flatMap(splitToId) \
-			.map(lambda id: (id, 1)) \
-            .reduceByKey(lambda a, b: a + b)
-
-counts = text_file \
-			.flatMap(splitToPair) \
-			.map(lambda id: (id, 1)) \
-            .reduceByKey(lambda a, b: a + b)
-			
-			
-counts.saveAsTextFile("canidatePairs")
+print(len(firstPhaseArray))
+print("Finished.")
