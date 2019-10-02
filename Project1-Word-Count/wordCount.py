@@ -4,7 +4,10 @@ from pyspark import SparkContext
 import re
 
 print("Starting...")
-shutil.rmtree("wordCountOutput")
+try:
+	shutil.rmtree("wordCountOutput")
+except:
+	pass
 
 def splitter(line):
 	line = re.sub(r'^\W+|\W+$', '', line)
