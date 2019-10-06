@@ -8,7 +8,7 @@ print("Starting...")
 
 def clearResult():
 	try:
-		shutil.rmtree("result")
+		shutil.rmtree("results")
 	except:
 		pass
 
@@ -84,25 +84,25 @@ def countItems(lines):
 	return returnArray
 	
 def getConfidence(counts):
-	countList = list(counts)
-	countDict = { count[0] : count[1] for count in countList }
-	for index, count in enumerate(countList):
-		key = count[0]
-		depth = len(key) - 1
+	countDict = { count[0] : count[1] for count in counts }
+	confidenceAssociations = []
+	for countKey in countDict:
+		depth = len(countKey) - 1
 		if depth == 0:
 			continue
-		combos = list(itertools.combinations(key, depth))
-		for consequentKey in key:
+		combos = list(itertools.combinations(countKey, depth))
+		for consequentKey in countKey:
 			for combo in combos:
 				skip = False
 				for subKey in combo:
 					if subKey == consequentKey:
 						skip = True
+						break
 				if skip:
 					continue
-				confidence = round(count[1] / countDict[combo], 3)
-				countList[index] += ((str(list(combo)) + "=>" + str(consequentKey)) + "=" + str(confidence),)
-	return countList			
+				confidence = round(countDict[countKey] / countDict[combo], 3)
+				confidenceAssociations.append((list(combo), consequentKey, confidence,))
+	return confidenceAssociations			
 
 clearResult()
 support = 100
@@ -118,22 +118,39 @@ firstPhaseArray = rddToProcess \
 					.collect() 
 
 #Second Phase
-result = sc.textFile('browsing.txt', 1) \
+supportResult = sc.textFile('browsing.txt', 1) \
 			.mapPartitions(countItems) \
 			.filter(lambda count: ((count[1] > support))) \
-			.mapPartitions(getConfidence) \
 			.sortBy(lambda a: -a[1]) \
 			.sortBy(lambda a: len(a[0])) \
+		
+#Get confidence
+confidenceResult = supportResult \
+			.mapPartitions(getConfidence) \
+			.sortBy(lambda a: -a[2]) \
+			.sortBy(lambda a: len(a[0])) \
 			.collect()
-			
-#Results	
-os.mkdir("result")
+
+#Write Results	
+os.mkdir("results")
+os.mkdir("results/support")
+os.mkdir("results/confidence")
+
+supportResult = supportResult.collect()
 i = 0
 while i < maxDepth:
-	with open("result/depth" + str(i + 1) + ".txt", 'w') as outfile:
-		for line in result:
+	with open("results/support/depth" + str(i + 1) + ".txt", 'w') as outfile:
+		for line in supportResult:
 			if len(line[0]) == i + 1:
 				outfile.write(str(line) + "\n")
 	i += 1
+	
+i = 1
+while i < maxDepth:
+	with open("results/confidence/depth" + str(i + 1) + ".txt", 'w') as outfile:
+		for line in confidenceResult:
+			if len(line[0]) == i:
+				outfile.write(str(line) + "\n")
+	i += 1	
 	
 print("Finished.")
