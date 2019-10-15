@@ -64,7 +64,7 @@ def getCost(clusters):
 	for clusterKey in clusters:
 		cluster = clusters[clusterKey]
 		for point in cluster:
-			cost += math.pow(getDistance(point, centroids[clusterKey]), 2)
+			cost += getDistance(point, centroids[clusterKey])
 	return cost	
 		
 clearResult()
