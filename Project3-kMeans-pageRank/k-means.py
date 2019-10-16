@@ -10,7 +10,7 @@ print("Starting...")
 
 def clearResult():
 	try:
-		shutil.rmtree("result")
+		shutil.rmtree("result/k-means")
 	except:
 		pass
 		
@@ -67,44 +67,48 @@ def getCost(clusters):
 			cost += getDistance(point, centroids[clusterKey])
 	return cost	
 		
-clearResult()
+if __name__ == "__main__":
+	clearResult()
 
-numClusters = 10
-dimensions = 20
-iterations = 20
+	numClusters = 10
+	dimensions = 20
+	iterations = 20
 
-sc = SparkContext("local", "k-means")
+	sc = SparkContext("local", "k-means")
 
-points = sc.textFile('data.txt') \
-		.map(lambda d: getPoints(d)) \
-		.collect()
-centroids = sc.textFile('centroid.txt') \
-				.map(lambda d: getPoints(d)) \
-				.collect()
-centroids = centroids[0:numClusters]		
+	points = sc.textFile('data.txt') \
+			.map(lambda d: getPoints(d)) \
+			.collect()
+	centroids = sc.textFile('centroid.txt') \
+					.map(lambda d: getPoints(d)) \
+					.collect()
+	centroids = centroids[0:numClusters]		
 
 
-costs = []
-for i in range(0, iterations):
-	clusters = assignPoints()
-	if i == 0:
+	costs = []
+	for i in range(0, iterations):
+		clusters = assignPoints()
+		if i == 0:
+			costs.append(getCost(clusters))
+		updateCentroids(clusters)
 		costs.append(getCost(clusters))
-	updateCentroids(clusters)
-	costs.append(getCost(clusters))
 
-os.mkdir("result")
-os.mkdir("result/k-means")
-with open("result/k-means/final-centroids.txt", "w") as outfile:
-	for i in range(0, numClusters):
-		outfile.write(str(centroids[i]) + "\n")
+	try:
+		os.mkdir("result")
+	except:
+		pass
+	os.mkdir("result/k-means")
+	with open("result/k-means/final-centroids.txt", "w") as outfile:
+		for i in range(0, numClusters):
+			outfile.write(str(centroids[i]) + "\n")
 
-with open("result/k-means/iteration-vs-cost.txt", "w") as outfile:
-	for i in range(0, iterations + 1):
-		outfile.write("Iteration: " + str(i) + " Cost: " + str(costs[i]) + "\n")
+	with open("result/k-means/iteration-vs-cost.txt", "w") as outfile:
+		for i in range(0, iterations + 1):
+			outfile.write("Iteration: " + str(i) + " Cost: " + str(costs[i]) + "\n")
 
-xi = list(range(iterations + 1))
-plt.plot(xi, costs, 'ro')
-plt.xticks(xi)
-plt.xlabel("Iteration")
-plt.ylabel("Cost")
-plt.savefig('result/k-means/iteration-vs-cost.png')
+	xi = list(range(iterations + 1))
+	plt.plot(xi, costs, 'ro')
+	plt.xticks(xi)
+	plt.xlabel("Iteration")
+	plt.ylabel("Cost")
+	plt.savefig('result/k-means/iteration-vs-cost.png')
